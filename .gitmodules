@@ -1,0 +1,3 @@
+[submodule "vma_xml_generator"]
+	path = vma_xml_generator
+	url = https://github.com/Cvelth/vma_xml_generator

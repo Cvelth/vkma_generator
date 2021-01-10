@@ -1,3 +1,6 @@
 [submodule "vma_xml_generator"]
 	path = vma_xml_generator
 	url = https://github.com/Cvelth/vma_xml_generator
+[submodule "vulkan_hpp"]
+	path = vulkan_hpp
+	url = https://github.com/KhronosGroup/Vulkan-Hpp

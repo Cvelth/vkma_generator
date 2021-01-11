@@ -26,6 +26,8 @@ templated.project "generator"
 	defines {
 		"INPUT_FILENAME=\"" .. _MAIN_SCRIPT_DIR .. "/vma_xml_generator/output/vma.xml\"",
 		"OUTPUT_FILENAME=\"" .. _MAIN_SCRIPT_DIR .. "/output/vkma.hpp\"",
+		"INCLUDED_FILENAME=\"vk_mem_alloc.h\"",
+
 		"COMMAND_PREFIX=\"vma\"",
 		"MACRO_PREFIX=\"VMA\"",
 		"STRUCT_PREFIX=\"Vma\"",
@@ -33,5 +35,9 @@ templated.project "generator"
 		
 		"SPEC_API_NAME=\"vma\"",
 		"HEADER_NAME=\"vkma.hpp\"",
-		"HEADER_MACRO=\"VKMA\""
+		"HEADER_MACRO=\"VKMA\"",
+
+		"NO_DISPATCH",
+		"NO_VERSION_CHECK",
+		"NO_STRUCTURE_CHAIN"
 	}

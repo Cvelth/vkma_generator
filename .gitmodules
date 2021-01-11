@@ -1,6 +1,12 @@
 [submodule "vma_xml_generator"]
 	path = vma_xml_generator
 	url = https://github.com/Cvelth/vma_xml_generator
-[submodule "vulkan_hpp"]
-	path = vulkan_hpp
-	url = https://github.com/KhronosGroup/Vulkan-Hpp
+[submodule "third_party"]
+	path = third_party
+	url = https://github.com/cvelth/third_party
+[submodule "script/premake"]
+	path = script/premake
+	url = https://github.com/cvelth/misc_premake
+[submodule "vulkan_hpp_generator_fork"]
+	path = vulkan_hpp_generator_fork
+	url = https://github.com/Cvelth/vkma_vulkan_hpp_fork

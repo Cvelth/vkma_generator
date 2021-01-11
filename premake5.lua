@@ -24,6 +24,14 @@ templated.project "generator"
 	depends "tinyxml2"
 
 	defines {
-		"VK_SPEC=\"" .. _MAIN_SCRIPT_DIR .. "/vma_xml_generator/output/vma.xml\"",
-		"VULKAN_HPP_FILE=\"" .. _MAIN_SCRIPT_DIR .. "/output/vkma.hpp\""
+		"INPUT_FILENAME=\"" .. _MAIN_SCRIPT_DIR .. "/vma_xml_generator/output/vma.xml\"",
+		"OUTPUT_FILENAME=\"" .. _MAIN_SCRIPT_DIR .. "/output/vkma.hpp\"",
+		"COMMAND_PREFIX=\"vma\"",
+		"MACRO_PREFIX=\"VMA\"",
+		"STRUCT_PREFIX=\"Vma\"",
+		"DEFAULT_NAMESPACE=\"vkma\"",
+		
+		"SPEC_API_NAME=\"vma\"",
+		"HEADER_NAME=\"vkma.hpp\"",
+		"HEADER_MACRO=\"VKMA\""
 	}

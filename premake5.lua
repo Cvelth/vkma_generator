@@ -24,20 +24,24 @@ templated.project "generator"
 	depends "tinyxml2"
 
 	defines {
-		"INPUT_FILENAME=\"" .. _MAIN_SCRIPT_DIR .. "/vma_xml_generator/output/vma.xml\"",
+		"INPUT_FILENAME=\"" .. _MAIN_SCRIPT_DIR .. "/vkma_xml_generator/output/vkma.xml\"",
 		"OUTPUT_FILENAME=\"" .. _MAIN_SCRIPT_DIR .. "/output/vkma.hpp\"",
 		"INCLUDED_FILENAME=\"vk_mem_alloc.h\"",
 
-		"COMMAND_PREFIX=\"vma\"",
-		"MACRO_PREFIX=\"VMA\"",
-		"STRUCT_PREFIX=\"Vma\"",
+		"COMMAND_PREFIX=\"vkma\"",
+		"MACRO_PREFIX=\"VKMA\"",
+		"STRUCT_PREFIX=\"Vkma\"",
 		"DEFAULT_NAMESPACE=\"vkma\"",
 		
-		"SPEC_API_NAME=\"vma\"",
+		"SPEC_API_NAME=\"vkma\"",
 		"HEADER_NAME=\"vkma.hpp\"",
 		"HEADER_MACRO=\"VKMA\"",
 
 		"NO_DISPATCH",
 		"NO_VERSION_CHECK",
-		"NO_STRUCTURE_CHAIN"
+		"NO_STRUCTURE_CHAIN",
+		"NO_OBJECT_TYPE_ENUM",
+		"NO_STRUCTURE_TYPE_ENUM",
+		"NO_INDEX_TYPE_TRAITS",
+		"NO_DEBUG_REPORT_OBJECT_TYPE_ENUM"
 	}

@@ -1,6 +1,6 @@
-[submodule "vma_xml_generator"]
-	path = vma_xml_generator
-	url = https://github.com/Cvelth/vma_xml_generator
+[submodule "vkma_xml_generator"]
+	path = vkma_xml_generator
+	url = https://github.com/Cvelth/vkma_xml_generator
 [submodule "third_party"]
 	path = third_party
 	url = https://github.com/cvelth/third_party

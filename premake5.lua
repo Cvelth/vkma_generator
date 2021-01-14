@@ -27,6 +27,7 @@ templated.project "generator"
 		"INPUT_FILENAME=\"" .. _MAIN_SCRIPT_DIR .. "/vkma_xml_generator/output/vkma.xml\"",
 		"OUTPUT_FILENAME=\"" .. _MAIN_SCRIPT_DIR .. "/output/vkma.hpp\"",
 		"INCLUDED_FILENAME=\"vk_mem_alloc.h\"",
+		"CLANG_FORMAT_EXECUTABLE=\"clang-format\"",
 
 		"COMMAND_PREFIX=\"vkma\"",
 		"MACRO_PREFIX=\"VKMA\"",

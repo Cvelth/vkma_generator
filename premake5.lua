@@ -33,6 +33,7 @@ templated.project "generator"
 		"COMMAND_PREFIX=\"vkma\"",
 		"MACRO_PREFIX=\"VKMA\"",
 		"STRUCT_PREFIX=\"Vkma\"",
+		"CUSTOM_ENUM_PREFIX=\"VMA\"",
 		"CUSTOM_RESULT_ENUM_PREFIX=\"VK\"",
 		"DEFAULT_NAMESPACE=\"vkma\"",
 		"INSTANCE_HANDLE_NAME=\"Allocator\"",

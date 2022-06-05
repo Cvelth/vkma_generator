@@ -272,6 +272,9 @@ typedef struct VkmaVulkanFunctions {
   PFN_vkBindImageMemory2KHR vkBindImageMemory2KHR;
 
   PFN_vkGetPhysicalDeviceMemoryProperties2KHR vkGetPhysicalDeviceMemoryProperties2KHR;
+
+  PFN_vkGetDeviceBufferMemoryRequirements vkGetDeviceBufferMemoryRequirements;
+  PFN_vkGetDeviceImageMemoryRequirements vkGetDeviceImageMemoryRequirements;
 } VkmaVulkanFunctions;
 static_assert(sizeof(VkmaVulkanFunctions) >= sizeof(VmaVulkanFunctions),
               "struct and wrapper have different size!");
@@ -285,9 +288,11 @@ typedef struct VkmaAllocatorCreateInfo {
   VkDeviceSize preferredLargeHeapBlockSize;
   const VkAllocationCallbacks *VMA_NULLABLE pAllocationCallbacks;
   const VkmaDeviceMemoryCallbacks *VMA_NULLABLE pDeviceMemoryCallbacks;
+  const VkDeviceSize *VMA_NULLABLE pHeapSizeLimit;
   const VkmaVulkanFunctions *VMA_NULLABLE pVulkanFunctions;
   VkInstance VMA_NOT_NULL instance;
   uint32_t vulkanApiVersion;
+  const VkExternalMemoryHandleTypeFlagsKHR *VMA_NULLABLE pTypeExternalMemoryHandleTypes;
 } VkmaAllocatorCreateInfo;
 static_assert(sizeof(VkmaAllocatorCreateInfo) == sizeof(VmaAllocatorCreateInfo),
               "struct and wrapper have different size!");
@@ -311,7 +316,7 @@ static_assert(std::is_standard_layout<VkmaDetailedStatistics>::value,
 
 typedef struct VkmaTotalStatistics {
   VkmaDetailedStatistics memoryType[VK_MAX_MEMORY_TYPES];
-  VkmaDetailedStatistics memoryHeap[VK_MAX_MEMORY_TYPES];
+  VkmaDetailedStatistics memoryHeap[VK_MAX_MEMORY_HEAPS];
   VkmaDetailedStatistics total;
 } VkmaTotalStatistics;
 static_assert(sizeof(VkmaTotalStatistics) == sizeof(VmaTotalStatistics),
@@ -333,7 +338,7 @@ typedef struct VkmaDefragmentationInfo {
   VkmaPool VMA_NULLABLE pool;
   VkDeviceSize maxBytesPerPass;
   uint32_t maxAllocationsPerPass;
-} VkmaDefragmentationInfo2;
+} VkmaDefragmentationInfo;
 static_assert(sizeof(VkmaDefragmentationInfo) == sizeof(VmaDefragmentationInfo),
               "struct and wrapper have different size!");
 static_assert(std::is_standard_layout<VkmaDefragmentationInfo>::value,
@@ -433,8 +438,8 @@ inline void vkmaSetCurrentFrameIndex(VkmaAllocator allocator, uint32_t frameInde
 }
 
 inline void vkmaCalculateStatistics(VkmaAllocator allocator, VkmaTotalStatistics *pStats) {
-  vmaCalculateStats(reinterpret_cast<VmaAllocator>(allocator),
-                    reinterpret_cast<VmaTotalStatistics *>(pStats));
+  vmaCalculateStatistics(reinterpret_cast<VmaAllocator>(allocator),
+                         reinterpret_cast<VmaTotalStatistics *>(pStats));
 }
 
 inline void vkmaGetHeapBudgets(VkmaAllocator allocator, VkmaBudget *pBudgets) {
@@ -480,14 +485,14 @@ inline void vkmaDestroyPool(VkmaAllocator allocator, VkmaPool pool) {
 }
 inline void vkmaGetPoolStatistics(VkmaAllocator allocator, VkmaPool pool,
                                   VkmaStatistics *pPoolStats) {
-  vkmaGetPoolStatistics(reinterpret_cast<VmaAllocator>(allocator), reinterpret_cast<VmaPool>(pool),
-                        reinterpret_cast<VmaStatistics *>(pPoolStats));
+  vmaGetPoolStatistics(reinterpret_cast<VmaAllocator>(allocator), reinterpret_cast<VmaPool>(pool),
+                       reinterpret_cast<VmaStatistics *>(pPoolStats));
 }
 inline void vkmaCalculatePoolStatistics(VkmaAllocator allocator, VkmaPool pool,
                                         VkmaDetailedStatistics *pPoolStats) {
-  vkmaCalculatePoolStatistics(reinterpret_cast<VmaAllocator>(allocator),
-                              reinterpret_cast<VmaPool>(pool),
-                              reinterpret_cast<VmaDetailedStatistics *>(pPoolStats));
+  vmaCalculatePoolStatistics(reinterpret_cast<VmaAllocator>(allocator),
+                             reinterpret_cast<VmaPool>(pool),
+                             reinterpret_cast<VmaDetailedStatistics *>(pPoolStats));
 }
 inline VkmaResult vkmaCheckPoolCorruption(VkmaAllocator allocator, VkmaPool pool) {
   return vmaCheckPoolCorruption(reinterpret_cast<VmaAllocator>(allocator),
@@ -607,25 +612,24 @@ inline VkmaResult vkmaBeginDefragmentation(VkmaAllocator allocator,
                                  reinterpret_cast<const VmaDefragmentationInfo *>(pInfo),
                                  reinterpret_cast<VmaDefragmentationContext *>(pContext));
 }
-inline VkmaResult vkmaEndDefragmentation(VkmaAllocator allocator,
-                                         VkmaDefragmentationContext context,
-                                         VkmaDefragmentationStats *pStats) {
-  return vmaEndDefragmentation(reinterpret_cast<VmaAllocator>(allocator),
-                               reinterpret_cast<VmaDefragmentationContext>(context),
-                               reinterpret_cast<VmaDefragmentationStats *>(pStats));
+inline void vkmaEndDefragmentation(VkmaAllocator allocator, VkmaDefragmentationContext context,
+                                   VkmaDefragmentationStats *pStats) {
+  vmaEndDefragmentation(reinterpret_cast<VmaAllocator>(allocator),
+                        reinterpret_cast<VmaDefragmentationContext>(context),
+                        reinterpret_cast<VmaDefragmentationStats *>(pStats));
 }
 inline VkmaResult vkmaBeginDefragmentationPass(VkmaAllocator allocator,
-                                               VkmaDefragmentationContext pContext,
-                                               const VkmaDefragmentationPassMoveInfo *pPassInfo) {
+                                               VkmaDefragmentationContext context,
+                                               VkmaDefragmentationPassMoveInfo *pPassInfo) {
   return vmaBeginDefragmentationPass(reinterpret_cast<VmaAllocator>(allocator),
-                                     reinterpret_cast<VmaDefragmentationContext>(pContext),
+                                     reinterpret_cast<VmaDefragmentationContext>(context),
                                      reinterpret_cast<VmaDefragmentationPassMoveInfo *>(pPassInfo));
 }
 inline VkmaResult vkmaEndDefragmentationPass(VkmaAllocator allocator,
-                                             VkmaDefragmentationContext pContext,
-                                             const VkmaDefragmentationPassMoveInfo *pPassInfo) {
+                                             VkmaDefragmentationContext context,
+                                             VkmaDefragmentationPassMoveInfo *pPassInfo) {
   return vmaEndDefragmentationPass(reinterpret_cast<VmaAllocator>(allocator),
-                                   reinterpret_cast<VmaDefragmentationContext>(pContext),
+                                   reinterpret_cast<VmaDefragmentationContext>(context),
                                    reinterpret_cast<VmaDefragmentationPassMoveInfo *>(pPassInfo));
 }
 
@@ -699,8 +703,8 @@ inline void vkmaDestroyImage(VkmaAllocator allocator, VkmaImage image) {
 
 inline VkmaResult vkmaCreateVirtualBlock(const VkmaVirtualBlockCreateInfo *pCreateInfo,
                                          VkmaVirtualBlock *pVirtualBlock) {
-  return vmaCreatePool(reinterpret_cast<const VmaVirtualBlockCreateInfo *>(pCreateInfo),
-                       reinterpret_cast<VmaVirtualBlock *>(pVirtualBlock));
+  return vmaCreateVirtualBlock(reinterpret_cast<const VmaVirtualBlockCreateInfo *>(pCreateInfo),
+                               reinterpret_cast<VmaVirtualBlock *>(pVirtualBlock));
 }
 inline void vkmaDestroyVirtualBlock(VkmaVirtualBlock virtualBlock) {
   vmaDestroyVirtualBlock(reinterpret_cast<VmaVirtualBlock>(virtualBlock));
@@ -723,18 +727,20 @@ inline VkmaResult vkmaVirtualAllocate(VkmaVirtualBlock virtualBlock,
                             reinterpret_cast<const VmaVirtualAllocationCreateInfo *>(pCreateInfo),
                             reinterpret_cast<VmaVirtualAllocation *>(pAllocation), nullptr);
 }
-inline VkmaResult vkmaVirtualFree(VkmaVirtualBlock virtualBlock, VkmaVirtualAllocation allocation) {
-  return vmaVirtualFree(reinterpret_cast<VmaVirtualBlock>(virtualBlock),
-                        reinterpret_cast<VmaVirtualAllocation>(allocation));
+inline void vkmaVirtualFree(VkmaVirtualBlock virtualBlock, VkmaVirtualAllocation allocation) {
+  vmaVirtualFree(reinterpret_cast<VmaVirtualBlock>(virtualBlock),
+                 reinterpret_cast<VmaVirtualAllocation>(allocation));
 }
 inline void vkmaClearVirtualBlock(VkmaVirtualBlock virtualBlock) {
   vmaClearVirtualBlock(reinterpret_cast<VmaVirtualBlock>(virtualBlock));
 }
 
 inline void vkmaSetVirtualAllocationUserData(VkmaVirtualBlock virtualBlock,
-                                             VkmaVirtualAllocation allocation, void *pUserData) {
+                                             VkmaVirtualAllocation allocation,
+                                             const void *pUserData) {
   vmaSetVirtualAllocationUserData(reinterpret_cast<VmaVirtualBlock>(virtualBlock),
-                                  reinterpret_cast<VmaVirtualAllocation>(allocation), pUserData);
+                                  reinterpret_cast<VmaVirtualAllocation>(allocation),
+                                  const_cast<void *>(pUserData));
 }
 inline void vkmaGetVirtualBlockStatistics(VkmaVirtualBlock virtualBlock, VkmaStatistics *pStats) {
   vmaGetVirtualBlockStatistics(reinterpret_cast<VmaVirtualBlock>(virtualBlock),
@@ -1585,7 +1591,7 @@ namespace VKMA_NAMESPACE {
   protected:
     template <typename T> void destroy(T t) VKMA_NOEXCEPT {
       VKMA_ASSERT(m_owner);
-      m_owner.end(t);
+      std::ignore = m_owner.end(t);
     }
 
   private:
@@ -1629,6 +1635,8 @@ namespace VKMA_NAMESPACE {
 
   using VkBool32 = uint32_t;
   using VkDeviceSize = uint64_t;
+  using VkExternalMemoryHandleTypeFlags = VkFlags;
+  using VkExternalMemoryHandleTypeFlagsKHR = VkExternalMemoryHandleTypeFlags;
   using VkMemoryPropertyFlags = VkFlags;
 
   template <typename EnumType, EnumType value> struct CppType {};
@@ -3052,8 +3060,9 @@ namespace VKMA_NAMESPACE {
       PFN_vkGetImageMemoryRequirements2KHR vkGetImageMemoryRequirements2KHR_ = {},
       PFN_vkBindBufferMemory2KHR vkBindBufferMemory2KHR_ = {},
       PFN_vkBindImageMemory2KHR vkBindImageMemory2KHR_ = {},
-      PFN_vkGetPhysicalDeviceMemoryProperties2KHR vkGetPhysicalDeviceMemoryProperties2KHR_ = {})
-      VKMA_NOEXCEPT
+      PFN_vkGetPhysicalDeviceMemoryProperties2KHR vkGetPhysicalDeviceMemoryProperties2KHR_ = {},
+      PFN_vkGetDeviceBufferMemoryRequirements vkGetDeviceBufferMemoryRequirements_ = {},
+      PFN_vkGetDeviceImageMemoryRequirements vkGetDeviceImageMemoryRequirements_ = {}) VKMA_NOEXCEPT
       : vkGetInstanceProcAddr(vkGetInstanceProcAddr_),
         vkGetDeviceProcAddr(vkGetDeviceProcAddr_),
         vkGetPhysicalDeviceProperties(vkGetPhysicalDeviceProperties_),
@@ -3077,7 +3086,9 @@ namespace VKMA_NAMESPACE {
         vkGetImageMemoryRequirements2KHR(vkGetImageMemoryRequirements2KHR_),
         vkBindBufferMemory2KHR(vkBindBufferMemory2KHR_),
         vkBindImageMemory2KHR(vkBindImageMemory2KHR_),
-        vkGetPhysicalDeviceMemoryProperties2KHR(vkGetPhysicalDeviceMemoryProperties2KHR_) {}
+        vkGetPhysicalDeviceMemoryProperties2KHR(vkGetPhysicalDeviceMemoryProperties2KHR_),
+        vkGetDeviceBufferMemoryRequirements(vkGetDeviceBufferMemoryRequirements_),
+        vkGetDeviceImageMemoryRequirements(vkGetDeviceImageMemoryRequirements_) {}
 
     VKMA_CONSTEXPR VulkanFunctions(VulkanFunctions const &rhs) VKMA_NOEXCEPT = default;
 
@@ -3228,6 +3239,18 @@ namespace VKMA_NAMESPACE {
       return *this;
     }
 
+    VulkanFunctions &setVkGetDeviceBufferMemoryRequirements(
+      PFN_vkGetDeviceBufferMemoryRequirements vkGetDeviceBufferMemoryRequirements_) VKMA_NOEXCEPT {
+      vkGetDeviceBufferMemoryRequirements = vkGetDeviceBufferMemoryRequirements_;
+      return *this;
+    }
+
+    VulkanFunctions &setVkGetDeviceImageMemoryRequirements(
+      PFN_vkGetDeviceImageMemoryRequirements vkGetDeviceImageMemoryRequirements_) VKMA_NOEXCEPT {
+      vkGetDeviceImageMemoryRequirements = vkGetDeviceImageMemoryRequirements_;
+      return *this;
+    }
+
     operator VkmaVulkanFunctions const &() const VKMA_NOEXCEPT {
       return *reinterpret_cast<const VkmaVulkanFunctions *>(this);
     }
@@ -3260,7 +3283,9 @@ namespace VKMA_NAMESPACE {
           && (vkBindBufferMemory2KHR == rhs.vkBindBufferMemory2KHR)
           && (vkBindImageMemory2KHR == rhs.vkBindImageMemory2KHR)
           && (vkGetPhysicalDeviceMemoryProperties2KHR
-              == rhs.vkGetPhysicalDeviceMemoryProperties2KHR);
+              == rhs.vkGetPhysicalDeviceMemoryProperties2KHR)
+          && (vkGetDeviceBufferMemoryRequirements == rhs.vkGetDeviceBufferMemoryRequirements)
+          && (vkGetDeviceImageMemoryRequirements == rhs.vkGetDeviceImageMemoryRequirements);
     }
 
     bool operator!=(VulkanFunctions const &rhs) const VKMA_NOEXCEPT { return !operator==(rhs); }
@@ -3291,6 +3316,8 @@ namespace VKMA_NAMESPACE {
     PFN_vkBindBufferMemory2KHR vkBindBufferMemory2KHR = {};
     PFN_vkBindImageMemory2KHR vkBindImageMemory2KHR = {};
     PFN_vkGetPhysicalDeviceMemoryProperties2KHR vkGetPhysicalDeviceMemoryProperties2KHR = {};
+    PFN_vkGetDeviceBufferMemoryRequirements vkGetDeviceBufferMemoryRequirements = {};
+    PFN_vkGetDeviceImageMemoryRequirements vkGetDeviceImageMemoryRequirements = {};
   };
   static_assert(sizeof(VulkanFunctions) == sizeof(VkmaVulkanFunctions),
                 "struct and wrapper have different size!");
@@ -3299,23 +3326,25 @@ namespace VKMA_NAMESPACE {
 
   struct AllocatorCreateInfo {
 #if !defined(VKMA_NO_STRUCT_CONSTRUCTORS)
-    VKMA_CONSTEXPR AllocatorCreateInfo(AllocatorCreateFlags flags_ = {},
-                                       VkPhysicalDevice physicalDevice_ = {}, VkDevice device_ = {},
-                                       VkDeviceSize preferredLargeHeapBlockSize_ = {},
-                                       const VkAllocationCallbacks *pAllocationCallbacks_ = {},
-                                       const DeviceMemoryCallbacks *pDeviceMemoryCallbacks_ = {},
-                                       const VulkanFunctions *pVulkanFunctions_ = {},
-                                       VkInstance instance_ = {},
-                                       uint32_t vulkanApiVersion_ = {}) VKMA_NOEXCEPT
+    VKMA_CONSTEXPR AllocatorCreateInfo(
+      AllocatorCreateFlags flags_ = {}, VkPhysicalDevice physicalDevice_ = {},
+      VkDevice device_ = {}, VkDeviceSize preferredLargeHeapBlockSize_ = {},
+      const VkAllocationCallbacks *pAllocationCallbacks_ = {},
+      const DeviceMemoryCallbacks *pDeviceMemoryCallbacks_ = {},
+      const VkDeviceSize *pHeapSizeLimit_ = {}, const VulkanFunctions *pVulkanFunctions_ = {},
+      VkInstance instance_ = {}, uint32_t vulkanApiVersion_ = {},
+      const VkExternalMemoryHandleTypeFlagsKHR *pTypeExternalMemoryHandleTypes_ = {}) VKMA_NOEXCEPT
       : flags(flags_),
         physicalDevice(physicalDevice_),
         device(device_),
         preferredLargeHeapBlockSize(preferredLargeHeapBlockSize_),
         pAllocationCallbacks(pAllocationCallbacks_),
         pDeviceMemoryCallbacks(pDeviceMemoryCallbacks_),
+        pHeapSizeLimit(pHeapSizeLimit_),
         pVulkanFunctions(pVulkanFunctions_),
         instance(instance_),
-        vulkanApiVersion(vulkanApiVersion_) {}
+        vulkanApiVersion(vulkanApiVersion_),
+        pTypeExternalMemoryHandleTypes(pTypeExternalMemoryHandleTypes_) {}
 
     VKMA_CONSTEXPR AllocatorCreateInfo(AllocatorCreateInfo const &rhs) VKMA_NOEXCEPT = default;
 
@@ -3364,6 +3393,11 @@ namespace VKMA_NAMESPACE {
       return *this;
     }
 
+    AllocatorCreateInfo &setPHeapSizeLimit(const VkDeviceSize *pHeapSizeLimit_) VKMA_NOEXCEPT {
+      pHeapSizeLimit = pHeapSizeLimit_;
+      return *this;
+    }
+
     AllocatorCreateInfo &setPVulkanFunctions(const VulkanFunctions *pVulkanFunctions_)
       VKMA_NOEXCEPT {
       pVulkanFunctions = pVulkanFunctions_;
@@ -3377,6 +3411,12 @@ namespace VKMA_NAMESPACE {
 
     AllocatorCreateInfo &setVulkanApiVersion(uint32_t vulkanApiVersion_) VKMA_NOEXCEPT {
       vulkanApiVersion = vulkanApiVersion_;
+      return *this;
+    }
+
+    AllocatorCreateInfo &setPTypeExternalMemoryHandleTypes(
+      const VkExternalMemoryHandleTypeFlagsKHR *pTypeExternalMemoryHandleTypes_) VKMA_NOEXCEPT {
+      pTypeExternalMemoryHandleTypes = pTypeExternalMemoryHandleTypes_;
       return *this;
     }
 
@@ -3397,8 +3437,9 @@ namespace VKMA_NAMESPACE {
           && (preferredLargeHeapBlockSize == rhs.preferredLargeHeapBlockSize)
           && (pAllocationCallbacks == rhs.pAllocationCallbacks)
           && (pDeviceMemoryCallbacks == rhs.pDeviceMemoryCallbacks)
-          && (pVulkanFunctions == rhs.pVulkanFunctions) && (instance == rhs.instance)
-          && (vulkanApiVersion == rhs.vulkanApiVersion);
+          && (pHeapSizeLimit == rhs.pHeapSizeLimit) && (pVulkanFunctions == rhs.pVulkanFunctions)
+          && (instance == rhs.instance) && (vulkanApiVersion == rhs.vulkanApiVersion)
+          && (pTypeExternalMemoryHandleTypes == rhs.pTypeExternalMemoryHandleTypes);
     }
 
     bool operator!=(AllocatorCreateInfo const &rhs) const VKMA_NOEXCEPT { return !operator==(rhs); }
@@ -3411,9 +3452,11 @@ namespace VKMA_NAMESPACE {
     VkDeviceSize preferredLargeHeapBlockSize = {};
     const VkAllocationCallbacks *pAllocationCallbacks = {};
     const DeviceMemoryCallbacks *pDeviceMemoryCallbacks = {};
+    const VkDeviceSize *pHeapSizeLimit = {};
     const VulkanFunctions *pVulkanFunctions = {};
     VkInstance instance = {};
     uint32_t vulkanApiVersion = {};
+    const VkExternalMemoryHandleTypeFlagsKHR *pTypeExternalMemoryHandleTypes = {};
   };
   static_assert(sizeof(AllocatorCreateInfo) == sizeof(VkmaAllocatorCreateInfo),
                 "struct and wrapper have different size!");
@@ -3621,82 +3664,6 @@ namespace VKMA_NAMESPACE {
   static_assert(sizeof(DefragmentationInfo) == sizeof(VkmaDefragmentationInfo),
                 "struct and wrapper have different size!");
   static_assert(std::is_standard_layout<DefragmentationInfo>::value,
-                "struct wrapper is not a standard layout!");
-
-  struct DefragmentationInfo2 {
-#if !defined(VKMA_NO_STRUCT_CONSTRUCTORS)
-    VKMA_CONSTEXPR DefragmentationInfo2(DefragmentationFlags flags_ = {}, Pool pool_ = {},
-                                        VkDeviceSize maxBytesPerPass_ = {},
-                                        uint32_t maxAllocationsPerPass_ = {}) VKMA_NOEXCEPT
-      : flags(flags_),
-        pool(pool_),
-        maxBytesPerPass(maxBytesPerPass_),
-        maxAllocationsPerPass(maxAllocationsPerPass_) {}
-
-    VKMA_CONSTEXPR DefragmentationInfo2(DefragmentationInfo2 const &rhs) VKMA_NOEXCEPT = default;
-
-    DefragmentationInfo2(VkmaDefragmentationInfo2 const &rhs) VKMA_NOEXCEPT
-      : DefragmentationInfo2(*reinterpret_cast<DefragmentationInfo2 const *>(&rhs)) {}
-#endif // !defined( VKMA_NO_STRUCT_CONSTRUCTORS )
-
-    VKMA_CONSTEXPR_14 DefragmentationInfo2 &operator=(DefragmentationInfo2 const &rhs)
-      VKMA_NOEXCEPT = default;
-
-    DefragmentationInfo2 &operator=(VkmaDefragmentationInfo2 const &rhs) VKMA_NOEXCEPT {
-      *this = *reinterpret_cast<VKMA_NAMESPACE::DefragmentationInfo2 const *>(&rhs);
-      return *this;
-    }
-
-    DefragmentationInfo2 &setFlags(DefragmentationFlags flags_) VKMA_NOEXCEPT {
-      flags = flags_;
-      return *this;
-    }
-
-    DefragmentationInfo2 &setPool(Pool pool_) VKMA_NOEXCEPT {
-      pool = pool_;
-      return *this;
-    }
-
-    DefragmentationInfo2 &setMaxBytesPerPass(VkDeviceSize maxBytesPerPass_) VKMA_NOEXCEPT {
-      maxBytesPerPass = maxBytesPerPass_;
-      return *this;
-    }
-
-    DefragmentationInfo2 &setMaxAllocationsPerPass(uint32_t maxAllocationsPerPass_) VKMA_NOEXCEPT {
-      maxAllocationsPerPass = maxAllocationsPerPass_;
-      return *this;
-    }
-
-    operator VkmaDefragmentationInfo2 const &() const VKMA_NOEXCEPT {
-      return *reinterpret_cast<const VkmaDefragmentationInfo2 *>(this);
-    }
-
-    operator VkmaDefragmentationInfo2 &() VKMA_NOEXCEPT {
-      return *reinterpret_cast<VkmaDefragmentationInfo2 *>(this);
-    }
-
-#if defined(VKMA_HAS_SPACESHIP_OPERATOR)
-    auto operator<=>(DefragmentationInfo2 const &) const = default;
-#else
-    bool operator==(DefragmentationInfo2 const &rhs) const VKMA_NOEXCEPT {
-      return (flags == rhs.flags) && (pool == rhs.pool) && (maxBytesPerPass == rhs.maxBytesPerPass)
-          && (maxAllocationsPerPass == rhs.maxAllocationsPerPass);
-    }
-
-    bool operator!=(DefragmentationInfo2 const &rhs) const VKMA_NOEXCEPT {
-      return !operator==(rhs);
-    }
-#endif
-
-  public:
-    DefragmentationFlags flags = {};
-    Pool pool = {};
-    VkDeviceSize maxBytesPerPass = {};
-    uint32_t maxAllocationsPerPass = {};
-  };
-  static_assert(sizeof(DefragmentationInfo2) == sizeof(VkmaDefragmentationInfo2),
-                "struct and wrapper have different size!");
-  static_assert(std::is_standard_layout<DefragmentationInfo2>::value,
                 "struct wrapper is not a standard layout!");
 
   class Allocation {
@@ -4166,7 +4133,7 @@ namespace VKMA_NAMESPACE {
 #if !defined(VKMA_NO_STRUCT_CONSTRUCTORS)
     VKMA_CONSTEXPR_14
     TotalStatistics(std::array<DetailedStatistics, VK_MAX_MEMORY_TYPES> const &memoryType_ = {},
-                    std::array<DetailedStatistics, VK_MAX_MEMORY_TYPES> const &memoryHeap_ = {},
+                    std::array<DetailedStatistics, VK_MAX_MEMORY_HEAPS> const &memoryHeap_ = {},
                     DetailedStatistics total_ = {}) VKMA_NOEXCEPT : memoryType(memoryType_),
                                                                     memoryHeap(memoryHeap_),
                                                                     total(total_) {}
@@ -4192,7 +4159,7 @@ namespace VKMA_NAMESPACE {
     }
 
     TotalStatistics &setMemoryHeap(
-      std::array<DetailedStatistics, VK_MAX_MEMORY_TYPES> const &memoryHeap_) VKMA_NOEXCEPT {
+      std::array<DetailedStatistics, VK_MAX_MEMORY_HEAPS> const &memoryHeap_) VKMA_NOEXCEPT {
       memoryHeap = memoryHeap_;
       return *this;
     }
@@ -4223,7 +4190,7 @@ namespace VKMA_NAMESPACE {
 
   public:
     VKMA_NAMESPACE::ArrayWrapper1D<DetailedStatistics, VK_MAX_MEMORY_TYPES> memoryType = {};
-    VKMA_NAMESPACE::ArrayWrapper1D<DetailedStatistics, VK_MAX_MEMORY_TYPES> memoryHeap = {};
+    VKMA_NAMESPACE::ArrayWrapper1D<DetailedStatistics, VK_MAX_MEMORY_HEAPS> memoryHeap = {};
     DetailedStatistics total = {};
   };
   static_assert(sizeof(TotalStatistics) == sizeof(VkmaTotalStatistics),
@@ -4642,6 +4609,11 @@ namespace VKMA_NAMESPACE {
     using deleter = ObjectDestroy<Allocator>;
   };
   using UniqueBuffer = UniqueHandle<Buffer>;
+  template <> class UniqueHandleTraits<DefragmentationContext> {
+  public:
+    using deleter = ObjectEnd<Allocator>;
+  };
+  using UniqueDefragmentationContext = UniqueHandle<DefragmentationContext>;
   template <> class UniqueHandleTraits<Image> {
   public:
     using deleter = ObjectDestroy<Allocator>;
@@ -4764,12 +4736,11 @@ namespace VKMA_NAMESPACE {
   #endif /*VKMA_NO_SMART_HANDLE*/
 #endif   /*VKMA_DISABLE_ENHANCED_MODE*/
 
-    VKMA_NODISCARD Result
-    beginDefragmentationPass(DefragmentationContext pContext,
-                             const DefragmentationPassMoveInfo *pPassInfo) const VKMA_NOEXCEPT;
+    VKMA_NODISCARD Result beginDefragmentationPass(
+      DefragmentationContext context, DefragmentationPassMoveInfo *pPassInfo) const VKMA_NOEXCEPT;
 #ifndef VKMA_DISABLE_ENHANCED_MODE
-    VKMA_NODISCARD_WHEN_NO_EXCEPTIONS typename ResultValueType<void>::type beginDefragmentationPass(
-      DefragmentationContext pContext, const DefragmentationPassMoveInfo &passInfo) const;
+    VKMA_NODISCARD_WHEN_NO_EXCEPTIONS typename ResultValueType<DefragmentationPassMoveInfo>::type
+    beginDefragmentationPass(DefragmentationContext context) const;
 #endif /*VKMA_DISABLE_ENHANCED_MODE*/
 
 #ifdef VKMA_DISABLE_ENHANCED_MODE
@@ -4892,33 +4863,24 @@ namespace VKMA_NAMESPACE {
 
     void destroy(Pool pool) const VKMA_NOEXCEPT;
 
-    VKMA_NODISCARD Result endDefragmentation(DefragmentationContext context,
-                                             DefragmentationStats *pStats) const VKMA_NOEXCEPT;
+    void endDefragmentation(DefragmentationContext context,
+                            DefragmentationStats *pStats) const VKMA_NOEXCEPT;
 #ifndef VKMA_DISABLE_ENHANCED_MODE
-    VKMA_NODISCARD_WHEN_NO_EXCEPTIONS typename ResultValueType<DefragmentationStats>::type
-    endDefragmentation(DefragmentationContext context) const;
+    VKMA_NODISCARD VKMA_NAMESPACE::DefragmentationStats
+    endDefragmentation(DefragmentationContext context) const VKMA_NOEXCEPT;
 #endif /*VKMA_DISABLE_ENHANCED_MODE*/
 
-    VKMA_NODISCARD Result end(DefragmentationContext context,
-                              DefragmentationStats *pStats) const VKMA_NOEXCEPT;
+    void end(DefragmentationContext context, DefragmentationStats *pStats) const VKMA_NOEXCEPT;
 #ifndef VKMA_DISABLE_ENHANCED_MODE
-    VKMA_NODISCARD_WHEN_NO_EXCEPTIONS typename ResultValueType<DefragmentationStats>::type
-    end(DefragmentationContext context) const;
+    VKMA_NODISCARD VKMA_NAMESPACE::DefragmentationStats
+    end(DefragmentationContext context) const VKMA_NOEXCEPT;
 #endif /*VKMA_DISABLE_ENHANCED_MODE*/
 
-    VKMA_NODISCARD Result
-    endDefragmentationPass(DefragmentationContext pContext,
-                           const DefragmentationPassMoveInfo *pPassInfo) const VKMA_NOEXCEPT;
+    VKMA_NODISCARD Result endDefragmentationPass(
+      DefragmentationContext context, DefragmentationPassMoveInfo *pPassInfo) const VKMA_NOEXCEPT;
 #ifndef VKMA_DISABLE_ENHANCED_MODE
-    VKMA_NODISCARD_WHEN_NO_EXCEPTIONS typename ResultValueType<void>::type endDefragmentationPass(
-      DefragmentationContext pContext, const DefragmentationPassMoveInfo &passInfo) const;
-#endif /*VKMA_DISABLE_ENHANCED_MODE*/
-
-    VKMA_NODISCARD Result end(DefragmentationContext pContext,
-                              const DefragmentationPassMoveInfo *pPassInfo) const VKMA_NOEXCEPT;
-#ifndef VKMA_DISABLE_ENHANCED_MODE
-    VKMA_NODISCARD_WHEN_NO_EXCEPTIONS typename ResultValueType<void>::type
-    end(DefragmentationContext pContext, const DefragmentationPassMoveInfo &passInfo) const;
+    VKMA_NODISCARD_WHEN_NO_EXCEPTIONS typename ResultValueType<DefragmentationPassMoveInfo>::type
+    endDefragmentationPass(DefragmentationContext context) const;
 #endif /*VKMA_DISABLE_ENHANCED_MODE*/
 
     VKMA_NODISCARD Result findMemoryTypeIndex(uint32_t memoryTypeBits,
@@ -5153,6 +5115,15 @@ namespace VKMA_NAMESPACE {
     static VKMA_CONST_OR_CONSTEXPR bool value = true;
   };
 
+#ifndef VKMA_NO_SMART_HANDLE
+  class VirtualBlock;
+  template <> class UniqueHandleTraits<VirtualAllocation> {
+  public:
+    using deleter = ObjectFree<VirtualBlock>;
+  };
+  using UniqueVirtualAllocation = UniqueHandle<VirtualAllocation>;
+#endif /*VKMA_NO_SMART_HANDLE*/
+
   class VirtualBlock {
   public:
     using CType = VkmaVirtualBlock;
@@ -5232,11 +5203,7 @@ namespace VKMA_NAMESPACE {
     VkBool32 isEmpty() const VKMA_NOEXCEPT;
 
     void setVirtualAllocationUserData(VirtualAllocation allocation,
-                                      void *pUserData) const VKMA_NOEXCEPT;
-#ifndef VKMA_DISABLE_ENHANCED_MODE
-    VKMA_NODISCARD void
-    setVirtualAllocationUserData(VirtualAllocation allocation) const VKMA_NOEXCEPT;
-#endif /*VKMA_DISABLE_ENHANCED_MODE*/
+                                      const void *pUserData) const VKMA_NOEXCEPT;
 
     VKMA_NODISCARD Result virtualAllocate(const VirtualAllocationCreateInfo *pCreateInfo,
                                           VirtualAllocation *pAllocation) const VKMA_NOEXCEPT;
@@ -5250,12 +5217,9 @@ namespace VKMA_NAMESPACE {
   #endif /*VKMA_NO_SMART_HANDLE*/
 #endif   /*VKMA_DISABLE_ENHANCED_MODE*/
 
-#ifdef VKMA_DISABLE_ENHANCED_MODE
-    VKMA_NODISCARD Result virtualFree(VirtualAllocation allocation) const VKMA_NOEXCEPT;
-#else
-    VKMA_NODISCARD_WHEN_NO_EXCEPTIONS typename ResultValueType<void>::type
-    virtualFree(VirtualAllocation allocation) const;
-#endif /*VKMA_DISABLE_ENHANCED_MODE*/
+    void virtualFree(VirtualAllocation allocation) const VKMA_NOEXCEPT;
+
+    void free(VirtualAllocation allocation) const VKMA_NOEXCEPT;
 
     VKMA_TYPESAFE_EXPLICIT operator VkmaVirtualBlock() const VKMA_NOEXCEPT {
       return m_virtualBlock;
@@ -5294,6 +5258,14 @@ namespace VKMA_NAMESPACE {
     createAllocatorUnique(const AllocatorCreateInfo &createInfo);
   #endif /*VKMA_NO_SMART_HANDLE*/
 #endif   /*VKMA_DISABLE_ENHANCED_MODE*/
+
+#ifndef VKMA_NO_SMART_HANDLE
+  template <> class UniqueHandleTraits<VirtualBlock> {
+  public:
+    using deleter = ObjectDestroy<NoParent>;
+  };
+  using UniqueVirtualBlock = UniqueHandle<VirtualBlock>;
+#endif /*VKMA_NO_SMART_HANDLE*/
 
   VKMA_NODISCARD Result createVirtualBlock(const VirtualBlockCreateInfo *pCreateInfo,
                                            VirtualBlock *pVirtualBlock) VKMA_NOEXCEPT;
@@ -5576,23 +5548,22 @@ namespace VKMA_NAMESPACE {
 #endif   /*VKMA_DISABLE_ENHANCED_MODE*/
 
   VKMA_NODISCARD VKMA_INLINE Result Allocator::beginDefragmentationPass(
-    DefragmentationContext pContext,
-    const DefragmentationPassMoveInfo *pPassInfo) const VKMA_NOEXCEPT {
+    DefragmentationContext context, DefragmentationPassMoveInfo *pPassInfo) const VKMA_NOEXCEPT {
     return static_cast<Result>(
-      vkmaBeginDefragmentationPass(m_allocator, static_cast<VkmaDefragmentationContext>(pContext),
-                                   reinterpret_cast<const VkmaDefragmentationPassMoveInfo *>(
-                                     pPassInfo)));
+      vkmaBeginDefragmentationPass(m_allocator, static_cast<VkmaDefragmentationContext>(context),
+                                   reinterpret_cast<VkmaDefragmentationPassMoveInfo *>(pPassInfo)));
   }
 
 #ifndef VKMA_DISABLE_ENHANCED_MODE
-  VKMA_NODISCARD_WHEN_NO_EXCEPTIONS VKMA_INLINE typename ResultValueType<void>::type
-  Allocator::beginDefragmentationPass(DefragmentationContext pContext,
-                                      const DefragmentationPassMoveInfo &passInfo) const {
+  VKMA_NODISCARD_WHEN_NO_EXCEPTIONS VKMA_INLINE
+    typename ResultValueType<DefragmentationPassMoveInfo>::type
+    Allocator::beginDefragmentationPass(DefragmentationContext context) const {
+    DefragmentationPassMoveInfo passInfo;
     Result result = static_cast<Result>(
-      vkmaBeginDefragmentationPass(m_allocator, static_cast<VkmaDefragmentationContext>(pContext),
-                                   reinterpret_cast<const VkmaDefragmentationPassMoveInfo *>(
-                                     &passInfo)));
-    return createResultValue(result, VKMA_NAMESPACE_STRING "::Allocator::beginDefragmentationPass");
+      vkmaBeginDefragmentationPass(m_allocator, static_cast<VkmaDefragmentationContext>(context),
+                                   reinterpret_cast<VkmaDefragmentationPassMoveInfo *>(&passInfo)));
+    return createResultValue(result, passInfo,
+                             VKMA_NAMESPACE_STRING "::Allocator::beginDefragmentationPass");
   }
 #endif /*VKMA_DISABLE_ENHANCED_MODE*/
 
@@ -5866,81 +5837,55 @@ namespace VKMA_NAMESPACE {
     vkmaDestroyPool(m_allocator, static_cast<VkmaPool>(pool));
   }
 
-  VKMA_NODISCARD VKMA_INLINE Result Allocator::endDefragmentation(
-    DefragmentationContext context, DefragmentationStats *pStats) const VKMA_NOEXCEPT {
-    return static_cast<Result>(
-      vkmaEndDefragmentation(m_allocator, static_cast<VkmaDefragmentationContext>(context),
-                             reinterpret_cast<VkmaDefragmentationStats *>(pStats)));
+  VKMA_INLINE void Allocator::endDefragmentation(DefragmentationContext context,
+                                                 DefragmentationStats *pStats) const VKMA_NOEXCEPT {
+    vkmaEndDefragmentation(m_allocator, static_cast<VkmaDefragmentationContext>(context),
+                           reinterpret_cast<VkmaDefragmentationStats *>(pStats));
   }
 
 #ifndef VKMA_DISABLE_ENHANCED_MODE
-  VKMA_NODISCARD_WHEN_NO_EXCEPTIONS VKMA_INLINE typename ResultValueType<DefragmentationStats>::type
-  Allocator::endDefragmentation(DefragmentationContext context) const {
-    DefragmentationStats stats;
-    Result result = static_cast<Result>(
-      vkmaEndDefragmentation(m_allocator, static_cast<VkmaDefragmentationContext>(context),
-                             reinterpret_cast<VkmaDefragmentationStats *>(&stats)));
-    return createResultValue(result, stats,
-                             VKMA_NAMESPACE_STRING "::Allocator::endDefragmentation");
+  VKMA_NODISCARD VKMA_INLINE VKMA_NAMESPACE::DefragmentationStats
+  Allocator::endDefragmentation(DefragmentationContext context) const VKMA_NOEXCEPT {
+    VKMA_NAMESPACE::DefragmentationStats stats;
+    vkmaEndDefragmentation(m_allocator, static_cast<VkmaDefragmentationContext>(context),
+                           reinterpret_cast<VkmaDefragmentationStats *>(&stats));
+    return stats;
   }
 #endif /*VKMA_DISABLE_ENHANCED_MODE*/
 
-  VKMA_NODISCARD VKMA_INLINE Result
-  Allocator::end(DefragmentationContext context, DefragmentationStats *pStats) const VKMA_NOEXCEPT {
-    return static_cast<Result>(
-      vkmaEndDefragmentation(m_allocator, static_cast<VkmaDefragmentationContext>(context),
-                             reinterpret_cast<VkmaDefragmentationStats *>(pStats)));
+  VKMA_INLINE void Allocator::end(DefragmentationContext context,
+                                  DefragmentationStats *pStats) const VKMA_NOEXCEPT {
+    vkmaEndDefragmentation(m_allocator, static_cast<VkmaDefragmentationContext>(context),
+                           reinterpret_cast<VkmaDefragmentationStats *>(pStats));
   }
 
 #ifndef VKMA_DISABLE_ENHANCED_MODE
-  VKMA_NODISCARD_WHEN_NO_EXCEPTIONS VKMA_INLINE typename ResultValueType<DefragmentationStats>::type
-  Allocator::end(DefragmentationContext context) const {
-    DefragmentationStats stats;
-    Result result = static_cast<Result>(
-      vkmaEndDefragmentation(m_allocator, static_cast<VkmaDefragmentationContext>(context),
-                             reinterpret_cast<VkmaDefragmentationStats *>(&stats)));
-    return createResultValue(result, stats, VKMA_NAMESPACE_STRING "::Allocator::end");
+  VKMA_NODISCARD VKMA_INLINE VKMA_NAMESPACE::DefragmentationStats
+  Allocator::end(DefragmentationContext context) const VKMA_NOEXCEPT {
+    VKMA_NAMESPACE::DefragmentationStats stats;
+    vkmaEndDefragmentation(m_allocator, static_cast<VkmaDefragmentationContext>(context),
+                           reinterpret_cast<VkmaDefragmentationStats *>(&stats));
+    return stats;
   }
 #endif /*VKMA_DISABLE_ENHANCED_MODE*/
 
   VKMA_NODISCARD VKMA_INLINE Result Allocator::endDefragmentationPass(
-    DefragmentationContext pContext,
-    const DefragmentationPassMoveInfo *pPassInfo) const VKMA_NOEXCEPT {
+    DefragmentationContext context, DefragmentationPassMoveInfo *pPassInfo) const VKMA_NOEXCEPT {
     return static_cast<Result>(
-      vkmaEndDefragmentationPass(m_allocator, static_cast<VkmaDefragmentationContext>(pContext),
-                                 reinterpret_cast<const VkmaDefragmentationPassMoveInfo *>(
-                                   pPassInfo)));
+      vkmaEndDefragmentationPass(m_allocator, static_cast<VkmaDefragmentationContext>(context),
+                                 reinterpret_cast<VkmaDefragmentationPassMoveInfo *>(pPassInfo)));
   }
 
 #ifndef VKMA_DISABLE_ENHANCED_MODE
-  VKMA_NODISCARD_WHEN_NO_EXCEPTIONS VKMA_INLINE typename ResultValueType<void>::type
-  Allocator::endDefragmentationPass(DefragmentationContext pContext,
-                                    const DefragmentationPassMoveInfo &passInfo) const {
+  VKMA_NODISCARD_WHEN_NO_EXCEPTIONS VKMA_INLINE
+    typename ResultValueType<DefragmentationPassMoveInfo>::type
+    Allocator::endDefragmentationPass(DefragmentationContext context) const {
+    DefragmentationPassMoveInfo passInfo;
     Result result = static_cast<Result>(
-      vkmaEndDefragmentationPass(m_allocator, static_cast<VkmaDefragmentationContext>(pContext),
-                                 reinterpret_cast<const VkmaDefragmentationPassMoveInfo *>(
-                                   &passInfo)));
-    return createResultValue(result, VKMA_NAMESPACE_STRING "::Allocator::endDefragmentationPass");
-  }
-#endif /*VKMA_DISABLE_ENHANCED_MODE*/
-
-  VKMA_NODISCARD VKMA_INLINE Result
-  Allocator::end(DefragmentationContext pContext,
-                 const DefragmentationPassMoveInfo *pPassInfo) const VKMA_NOEXCEPT {
-    return static_cast<Result>(
-      vkmaEndDefragmentationPass(m_allocator, static_cast<VkmaDefragmentationContext>(pContext),
-                                 reinterpret_cast<const VkmaDefragmentationPassMoveInfo *>(
-                                   pPassInfo)));
-  }
-
-#ifndef VKMA_DISABLE_ENHANCED_MODE
-  VKMA_NODISCARD_WHEN_NO_EXCEPTIONS VKMA_INLINE typename ResultValueType<void>::type Allocator::end(
-    DefragmentationContext pContext, const DefragmentationPassMoveInfo &passInfo) const {
-    Result result = static_cast<Result>(
-      vkmaEndDefragmentationPass(m_allocator, static_cast<VkmaDefragmentationContext>(pContext),
-                                 reinterpret_cast<const VkmaDefragmentationPassMoveInfo *>(
-                                   &passInfo)));
-    return createResultValue(result, VKMA_NAMESPACE_STRING "::Allocator::end");
+      vkmaEndDefragmentationPass(m_allocator, static_cast<VkmaDefragmentationContext>(context),
+                                 reinterpret_cast<VkmaDefragmentationPassMoveInfo *>(&passInfo)));
+    return createResultValue(result, passInfo,
+                             VKMA_NAMESPACE_STRING "::Allocator::endDefragmentationPass");
   }
 #endif /*VKMA_DISABLE_ENHANCED_MODE*/
 
@@ -6453,21 +6398,11 @@ namespace VKMA_NAMESPACE {
     return vkmaIsVirtualBlockEmpty(m_virtualBlock);
   }
 
-  VKMA_INLINE void VirtualBlock::setVirtualAllocationUserData(VirtualAllocation allocation,
-                                                              void *pUserData) const VKMA_NOEXCEPT {
+  VKMA_INLINE void VirtualBlock::setVirtualAllocationUserData(
+    VirtualAllocation allocation, const void *pUserData) const VKMA_NOEXCEPT {
     vkmaSetVirtualAllocationUserData(m_virtualBlock, static_cast<VkmaVirtualAllocation>(allocation),
                                      pUserData);
   }
-
-#ifndef VKMA_DISABLE_ENHANCED_MODE
-  VKMA_NODISCARD VKMA_INLINE void
-  VirtualBlock::setVirtualAllocationUserData(VirtualAllocation allocation) const VKMA_NOEXCEPT {
-    void userData;
-    vkmaSetVirtualAllocationUserData(m_virtualBlock, static_cast<VkmaVirtualAllocation>(allocation),
-                                     &userData);
-    return userData;
-  }
-#endif /*VKMA_DISABLE_ENHANCED_MODE*/
 
   VKMA_NODISCARD VKMA_INLINE Result
   VirtualBlock::virtualAllocate(const VirtualAllocationCreateInfo *pCreateInfo,
@@ -6508,21 +6443,13 @@ namespace VKMA_NAMESPACE {
   #endif /*VKMA_NO_SMART_HANDLE*/
 #endif   /*VKMA_DISABLE_ENHANCED_MODE*/
 
-#ifdef VKMA_DISABLE_ENHANCED_MODE
-  VKMA_NODISCARD VKMA_INLINE Result
-  VirtualBlock::virtualFree(VirtualAllocation allocation) const VKMA_NOEXCEPT {
-    return static_cast<Result>(
-      vkmaVirtualFree(m_virtualBlock, static_cast<VkmaVirtualAllocation>(allocation)));
+  VKMA_INLINE void VirtualBlock::virtualFree(VirtualAllocation allocation) const VKMA_NOEXCEPT {
+    vkmaVirtualFree(m_virtualBlock, static_cast<VkmaVirtualAllocation>(allocation));
   }
-#else
-  VKMA_NODISCARD_WHEN_NO_EXCEPTIONS VKMA_INLINE typename ResultValueType<void>::type
-  VirtualBlock::virtualFree(VirtualAllocation allocation) const {
-    Result result = static_cast<Result>(
-      vkmaVirtualFree(m_virtualBlock, static_cast<VkmaVirtualAllocation>(allocation)));
-    return createResultValue(result, VKMA_NAMESPACE_STRING "::VirtualBlock::virtualFree");
-  }
-#endif /*VKMA_DISABLE_ENHANCED_MODE*/
 
+  VKMA_INLINE void VirtualBlock::free(VirtualAllocation allocation) const VKMA_NOEXCEPT {
+    vkmaVirtualFree(m_virtualBlock, static_cast<VkmaVirtualAllocation>(allocation));
+  }
 } // namespace VKMA_NAMESPACE
 
 namespace std {

@@ -10,6 +10,3 @@
 [submodule "vulkan_hpp_generator_fork"]
 	path = vulkan_hpp_generator_fork
 	url = https://github.com/Cvelth/vkma_vulkan_hpp_fork
-[submodule "vkma_bindings"]
-	path = vkma_bindings
-	url = https://github.com/Cvelth/vkma_bindings

@@ -26,7 +26,7 @@ templated.project "generator"
 	defines {
 		"INPUT_FILENAME=\"" .. _MAIN_SCRIPT_DIR .. "/vkma_xml_generator/output/vkma.xml\"",
 		"OUTPUT_FILENAME=\"" .. _MAIN_SCRIPT_DIR .. "/output/vkma.hpp\"",
-		"INCLUDED_BINDINGS=\"" .. _MAIN_SCRIPT_DIR .. "/vkma_bindings/include/vkma_bindings.hpp\"",
+		"INCLUDED_BINDINGS=\"" .. _MAIN_SCRIPT_DIR .. "/vkma_xml_generator/input/vkma_bindings/include/vkma_bindings.hpp\"",
 		"CLANG_FORMAT_EXECUTABLE=\"clang-format\"",
 
 		"COMMAND_PREFIX=\"vkma\"",

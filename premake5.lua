@@ -35,7 +35,6 @@ templated.project "generator"
 		"CUSTOM_ENUM_PREFIX=\"VMA\"",
 		"CUSTOM_RESULT_ENUM_PREFIX=\"VK\"",
 		"DEFAULT_NAMESPACE=\"vkma\"",
-		"INSTANCE_HANDLE_NAME=\"Allocator\"",
 		
 		"SPEC_API_NAME=\"vkma\"",
 		"HEADER_NAME=\"vkma.hpp\"",
